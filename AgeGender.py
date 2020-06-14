@@ -25,34 +25,37 @@ def getFaceBox(net, frame, conf_threshold=0.7):
     return frameOpencvDnn, bboxes
 
 
-parser = argparse.ArgumentParser(description='Use this script to run age and gender recognition using OpenCV.')
-parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
+parser = argparse.ArgumentParser(description='Esta diseñado para correr y determinar la edad y genero de la persona')
+parser.add_argument('--input', help='File video. ')
 
 args = parser.parse_args()
+##Agregamos los modelos entrenados pra poder determinar la edad y genero de la persona 
 
-faceProto = "opencv_face_detector.pbtxt"
-faceModel = "opencv_face_detector_uint8.pb"
+faceProto = "models/opencv_face_detector.pbtxt"  #Detectamos la cara de la persona
+faceModel = "models/opencv_face_detector_uint8.pb"
 
-ageProto = "age_deploy.prototxt"
-ageModel = "age_net.caffemodel"
+ageProto = "models/age_deploy.prototxt" #Se calcula la edad
+ageModel = "models/age_net.caffemodel"
 
-genderProto = "gender_deploy.prototxt"
-genderModel = "gender_net.caffemodel"
+genderProto = "models/gender_deploy.prototxt" #Se determina el género
+genderModel = "models/gender_net.caffemodel"
 
 MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
-ageList = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
+ageList = ['(0-2) Bebé', '(4-6) Niño', '(8-12) Niño', '(15-20) Joven ', '(25-32) Adulto', '(38-43) Adulto', '(48-53)Adulto', '(60-100) Anciano']
 genderList = ['Hombre', 'Mujer']
 
-# Load network
+
+    
+# Cargar network
 ageNet = cv.dnn.readNet(ageModel, ageProto)
 genderNet = cv.dnn.readNet(genderModel, genderProto)
 faceNet = cv.dnn.readNet(faceModel, faceProto)
 
-# Open a video file or an image file or a camera stream
+# Iniciar camara para la captura 
 cap = cv.VideoCapture(args.input if args.input else 0)
 padding = 20
 while cv.waitKey(1) < 0:
-    # Read frame
+    # Cargar frame
     t = time.time()
     hasFrame, frame = cap.read()
     if not hasFrame:
@@ -65,24 +68,22 @@ while cv.waitKey(1) < 0:
         continue
 
     for bbox in bboxes:
-        # print(bbox)
         face = frame[max(0,bbox[1]-padding):min(bbox[3]+padding,frame.shape[0]-1),max(0,bbox[0]-padding):min(bbox[2]+padding, frame.shape[1]-1)]
 
         blob = cv.dnn.blobFromImage(face, 1.0, (227, 227), MODEL_MEAN_VALUES, swapRB=False)
         genderNet.setInput(blob)
         genderPreds = genderNet.forward()
         gender = genderList[genderPreds[0].argmax()]
-        # print("Gender Output : {}".format(genderPreds))
-        print("Gender : {}, conf = {:.3f}".format(gender, genderPreds[0].max()))
+        print("Genero : {}, conf = {:.3f}".format(gender, genderPreds[0].max()))
 
         ageNet.setInput(blob)
         agePreds = ageNet.forward()
         age = ageList[agePreds[0].argmax()]
-        print("Age Output : {}".format(agePreds))
-        print("Age : {}, conf = {:.3f}".format(age, agePreds[0].max()))
+        print("Año Output : {}".format(agePreds))
+        print("Año : {}, conf = {:.3f}".format(age, agePreds[0].max()))
+
 
         label = "{},{}".format(gender, age)
         cv.putText(frameFace, label, (bbox[0], bbox[1]-10), cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2, cv.LINE_AA)
-        cv.imshow("Proyecto IA - LIBNI PÉREZ", frameFace)
-        # cv.imwrite("age-gender-out-{}".format(args.input),frameFace)
+        cv.imshow("PROYECTO IA - LIBNI PEREZ", frameFace)
     print("time : {:.3f}".format(time.time() - t))
